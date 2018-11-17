@@ -22,12 +22,6 @@ class FoodCrate(Counter):
         super().__init__(left, top, right, bottom)
         self.food = type
 
-class Trash(Counter):
-    pass
-
-class Serve(Counter):
-    pass
-
 class PlateReturn(Counter):
     def __init__(self, left, top, right, bottom):
         super().__init__(left, top, right, bottom)
@@ -42,7 +36,29 @@ class WashReturn(Counter):
     def __init__(self, left, top, right, bottom):
         super().__init__(left, top, right, bottom)
         self.plateCount = 0
+        
+class Stove(Counter):
+    def __init__(self, left, top, right, bottom):
+        super().__init__(left, top, right, bottom)
+        self.food1 = None
+        self.food2 = None
+        self.food3 = None
+        self.fire = False
+        self.dish = None
+    
+    def cook(self):
+        food = [str(self.food1), str(self.food2), str(self.food3)]
+        if food == ['onion', 'onion', 'onion']:
+            self.dish = Food('onion soup')
+            self.food1 = None
+            self.food2 = None
+            self.food3 = None
+            
+class Trash(Counter):
+    pass
 
+class Serve(Counter):
+    pass
 
 class CuttingBoard(Counter):
     pass
@@ -62,23 +78,13 @@ class Plate(object):
     def __repr__(self):
         return('Plate')
         
-class Stove(Counter):
-    def __init__(self, left, top, right, bottom):
-        super().__init__(left, top, right, bottom)
-        self.food1 = None
-        self.food2 = None
-        self.food3 = None
+class Extinguisher(object):
+    def __init__(self):
+        pass
+    def __repr__(self):
+        return('Extinguisher')
         
-        self.dish = None
-    
-    def cook(self):
-        food = [str(self.food1), str(self.food2), str(self.food3)]
-        if food == ['onion', 'onion', 'onion']:
-            self.dish = Food('onion soup')
-            self.food1 = None
-            self.food2 = None
-            self.food3 = None
-            
+
 class Player(object):
     def __init__(self):
         self.x = 400
@@ -128,9 +134,14 @@ class Player(object):
                 if key == 'down':
                     self.y -= self.speed
         
-        if self.x < 230 or self.x > 790:
+        if self.x < 235 or self.x > 790:
             self.x = 400
             self.y = 250
+            if str(self.item) == 'Plate':
+                counters[19].plateCount += 1
+            elif str(self.item) == 'Extinguisher':
+                counters[30].item = Extinguisher()
+            self.item = None
                     
         self.look = pygame.Rect(self.lookX, self.lookY, self.size//2,
                                 self.size//2)
@@ -182,7 +193,7 @@ class Player(object):
                             counters[c].plateCount -= 1                   
                             self.item = Plate()
                     else:
-                        if counters[c].item != None: #Put up from counter
+                        if counters[c].item != None: #Pick up from counter
                             self.item = counters[c].item 
                             counters[c].item = None
                         elif type(counters[c]) == FoodCrate: #Pick up from food crate
@@ -221,7 +232,11 @@ class Player(object):
                 if type(counters[c]) == Counter and counters[c].item == None: 
                     counters[c].item = self.item
                     self.item = None
-                        
+            elif str(self.item) == 'Extinguisher':
+                #Put extinguisher on empty counter
+                if type(counters[c]) == Counter and counters[c].item == None: 
+                    counters[c].item = self.item
+                    self.item = None
             elif self.item != None: #Carrying food
                 if type(counters[c]) == Trash: #Put in Trash
                     self.item = None
@@ -247,13 +262,22 @@ class Player(object):
                     self.item = None
                 
     def chop(self, c, counters):
-        if type(counters[c]) == CuttingBoard and type(counters[c].item) == Food:
-            counters[c].item.chopped = True
+        if self.item == None:
+            if type(counters[c]) == CuttingBoard and type(counters[c].item) == Food:
+                counters[c].item.chopped = True
     
     def wash(self, c, counters):
-        if type(counters[c]) == Wash and counters[c].plateCount != 0:
-            counters[c].plateCount -= 1
-            counters[c-1].plateCount += 1
+        if self.item == None:
+            if type(counters[c]) == Wash and counters[c].plateCount != 0:
+                counters[c].plateCount -= 1
+                counters[c-1].plateCount += 1
+    
+    def extinguish(self, c, counters):
+        if str(self.item) == 'Extinguisher':
+            if type(counters[c]) == Stove and counters[c].fire == True:
+                counters[c].fire = False
+                
+                
             
 def makeCounters():
     counters=[]
@@ -340,6 +364,7 @@ def makeCounters():
     
     counters[4].item = Plate()
     counters[5].item = Plate()
+    counters[30].item = Extinguisher()
     
     return counters
 
@@ -360,7 +385,7 @@ def drawFood(screen, x,y,size, item):
         pygame.draw.rect(screen, color, rect)
     else:
         pygame.draw.circle(screen, color, (x, y),size)
-    
+
 def playGame():
     animation_increment=10
     clock_tick_rate= 20
@@ -369,6 +394,7 @@ def playGame():
     background_image = pygame.image.load("Images/Background1000NoPlates.jpg").convert()
     plateImage = pygame.image.load("Images/Plate.png").convert_alpha()
     dirtyPlateImage = pygame.image.load("Images/DirtyPlate.png").convert_alpha()
+    extinguisherImage = pygame.image.load("Images/ExtinguisherFinal.png").convert_alpha()
     myfont = pygame.font.SysFont('Comic Sans MS', 30)
 
 
@@ -390,19 +416,19 @@ def playGame():
         if pressedKeys[pygame.K_x] == 1:
             pygame.quit()
         
-        if pressedKeys[pygame.K_LEFT] == 1:
+        if pressedKeys[pygame.K_LEFT] == 1 or pressedKeys[pygame.K_a] == 1:
             p1.move('left', counters)
             c = p1.lookAtCounter(counters, screen)
             
-        if pressedKeys[pygame.K_RIGHT] == 1:
+        if pressedKeys[pygame.K_RIGHT] == 1 or pressedKeys[pygame.K_d] == 1:
             p1.move('right', counters)
             c = p1.lookAtCounter(counters, screen)
 
-        if pressedKeys[pygame.K_UP] == 1:
+        if pressedKeys[pygame.K_UP] == 1 or pressedKeys[pygame.K_w] == 1:
             p1.move('up', counters)
             c = p1.lookAtCounter(counters, screen)
 
-        if pressedKeys[pygame.K_DOWN] == 1:
+        if pressedKeys[pygame.K_DOWN] == 1 or pressedKeys[pygame.K_s] == 1:
             p1.move('down', counters)
             c = p1.lookAtCounter(counters, screen)
             
@@ -416,6 +442,9 @@ def playGame():
             p1.chop(c, counters)
         if pressedKeys[pygame.K_t] == 1:
             p1.wash(c, counters)
+        if pressedKeys[pygame.K_f] == 1:
+            if str(p1.item) == 'Extinguisher':
+                p1.extinguish(c, counters)
         
         screen.blit(background_image, [0, 0])
         pygame.draw.rect(screen, (0,0,255), p1.p)
@@ -432,6 +461,8 @@ def playGame():
                     screen.blit(dirtyPlateImage, (p1.lookX, p1.lookY))
                 if p1.item.item != None:
                     drawFood(screen, p1.lookX, p1.lookY, p1.size//2, p1.item.item)
+            elif str(p1.item) == 'Extinguisher':
+                    screen.blit(extinguisherImage,(p1.lookX,p1.lookY))
             elif str(p1.item) == 'onion soup':
                 drawFood(screen, p1.lookX, p1.lookY, p1.size, p1.item)
             else:
@@ -482,6 +513,8 @@ def playGame():
                             drawFood(screen, counter.left+counter.width//2, 
                             counter.top+counter.height//4, p1.size//2,
                             counter.item.item)
+                    elif str(counter.item) == 'Extinguisher':
+                        screen.blit(extinguisherImage, (counter.left, counter.top))
                     else:
                         drawFood(screen, counter.left+counter.width//2, 
                             counter.top+counter.height//4, p1.size//2,
