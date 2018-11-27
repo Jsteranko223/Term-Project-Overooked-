@@ -134,38 +134,41 @@ class Player(object):
     def __init__(self, x, y):
         self.x = x
         self.y = y
-        self.size = 15
+        self.width = 15
+        self.height = 15
         self.speed = 10
-        self.p = pygame.Rect(self.x, self.y, self.size, self.size)
-        self.lookX = self.x+self.size//4
-        self.lookY = self.y+self.size//2 
+        self.p = pygame.Rect(self.x, self.y, self.width, self.height)
+        self.lookX = self.x+self.width//4
+        self.lookY = self.y+self.height//2 
         self.direction = 'down'
         self.item = None
+        self.action = False
+        self.c = -1
 
-    def move(self, key, counters):
+    def move(self, key, counters, player):
         if key == 'left':
             self.x -= self.speed
-            self.lookX = self.x-self.size//2
-            self.lookY = self.y+self.size//4
+            self.lookX = self.x-self.width//2
+            self.lookY = self.y+self.height//4
             self.direction = 'left'
         if key == 'right':
             self.x += self.speed
-            self.lookX = self.x+self.size
-            self.lookY = self.y+self.size//4
+            self.lookX = self.x+self.width
+            self.lookY = self.y+self.height//4
             self.direction = 'right'
         if key == 'up':
             self.y -= self.speed
-            self.lookX = self.x+self.size//4
-            self.lookY = self.y-self.size//2
+            self.lookX = self.x+self.width//4
+            self.lookY = self.y-self.height//2
             self.direction = 'up'
         if key == 'down':
             self.y += self.speed
-            self.lookX = self.x+self.size//4
-            self.lookY = self.y+self.size
+            self.lookX = self.x+self.width//4
+            self.lookY = self.y+self.height
             self.direction = 'down'
             
         for counter in counters:
-            if self.detectCollision(self.x, self.y, self.size, counter):
+            if self.detectCollision(self.x, self.y, self.width, self.height, counter):
                 if key == 'left':
                     self.x += self.speed
                     
@@ -178,6 +181,19 @@ class Player(object):
                 if key == 'down':
                     self.y -= self.speed
         
+        if self.detectCollision(self.x, self.y, self.width,self.height, player):
+            if key == 'left':
+                self.x += self.speed
+                
+            if key == 'right':
+                self.x -= self.speed
+
+            if key == 'up':
+                self.y += self.speed
+                
+            if key == 'down':
+                self.y -= self.speed
+                
         if self.x < 235 or (self.y > 300 and self.x > 790) or \
           (self.y<300  and self.x > 740):
             self.x = 400
@@ -200,33 +216,50 @@ class Player(object):
                     counters[35].item = Pot()
             self.item = None
                     
-        self.look = pygame.Rect(self.lookX, self.lookY, self.size//2,
-                                self.size//2)
-        self.p = pygame.Rect(self.x, self.y, self.size, self.size)
+        self.look = pygame.Rect(self.lookX, self.lookY, self.width//2,
+                                self.height//2)
+        self.p = pygame.Rect(self.x, self.y, self.width, self.height)
 
-    def detectCollision(self, px, py, psize, other):
-        if other.left+other.width >= px and px >= other.left and \
-           other.top + other.height >= py and py >= other.top:
-            return True
-            
-        if other.left+other.width >= px+psize and px+psize >= other.left and \
-           other.top+other.height >= py and py >=other.top:
-               return True
-               
-        if other.left+other.width>= px and px >= other.left and \
-           other.top + other.height >= py+psize and py+psize >= other.top:
-            return True
-            
-        if other.left+other.width >= px+psize and px+psize >= other.left and \
-           other.top+other.height >= py+psize and py+psize >= other.top:
-               return True
+    def detectCollision(self, px, py, pwidth, pheight, other):
+        if type(other) == Player:
+            if other.x+other.width >= px and px >= other.x and \
+            other.y + other.height >= py and py >= other.y:
+                return True
+                
+            if other.x+other.width >= px+pwidth and px+pwidth >= other.x and \
+            other.y+other.height >= py and py >=other.y:
+                return True
+                
+            if other.x+other.width>= px and px >= other.x and \
+            other.y + other.height >= py+pheight and py+pheight >= other.y:
+                return True
+                
+            if other.x+other.width >= px+pwidth and px+pwidth >= other.x and \
+            other.y+other.height >= py+pheight and py+pheight >= other.y:
+                return True
+        else:
+            if other.left+other.width >= px and px >= other.left and \
+            other.top + other.height >= py and py >= other.top:
+                return True
+                
+            if other.left+other.width >= px+pwidth and px+pwidth >= other.left and \
+            other.top+other.height >= py and py >=other.top:
+                return True
+                
+            if other.left+other.width>= px and px >= other.left and \
+            other.top + other.height >= py+pheight and py+pheight >= other.top:
+                return True
+                
+            if other.left+other.width >= px+pwidth and px+pwidth >= other.left and \
+            other.top+other.height >= py+pheight and py+pheight >= other.top:
+                return True
             
         return False
     
     def lookAtCounter(self, counters, screen):
         for i in range(len(counters)):
-            if self.detectCollision(self.lookX,self.lookY,self.size//2, 
-                                    counters[i]):
+            if self.detectCollision(self.lookX,self.lookY,self.width//2, 
+                                    self.height//4, counters[i]):
                 return i
         return -1
     
@@ -563,7 +596,7 @@ def generateRecipes():
     lst = [Dish('onion soup'), Dish('stew')]
     return(lst[random.randint(0,1)])
    
-def playGame():
+def playGame(playerCount):
     clock_tick_rate= 20
     screen = pygame.display.set_mode((1000,600), pygame.FULLSCREEN)
     clock = pygame.time.Clock()
@@ -580,12 +613,16 @@ def playGame():
     myfont = pygame.font.SysFont('Segoe UI Black', 30)
 
     dead = False
-    p1a = Player(400,250)
-    p1b = Player(600,250)
-    player = p1a
-    players = [p1a, p1b]
+    if playerCount == 1:
+        p1a = Player(400,250)
+        p1b = Player(600,250)
+        player = p1a
+        other = p1b
+        players = [p1a, p1b]
+    else:
+        p1a = Player(400,250)
+        
     counters = makeCounters()
-    c = -1
     
     switch = False
     action = False
@@ -603,28 +640,30 @@ def playGame():
                 if event.key == pygame.K_q:                    
                     #Pick up with hands
                     if player.item == None:
-                        player.pickUp(c, counters)
+                        player.pickUp(player.c, counters)
                     #Plate
                     elif str(player.item) == 'Plate':
                         if player.item.item != None:
-                            player.putDown(c, counters)
-                        elif str(counters[c].item) == 'Pot' and \
+                            player.putDown(player.c, counters)
+                        elif str(counters[player.c].item) == 'Pot' and \
                              player.item.dirty == False and \
-                             counters[c].item.dish != None:
-                            player.pickUp(c, counters)
+                             counters[player.c].item.dish != None:
+                            player.pickUp(player.c, counters)
                         else:
-                            player.putDown(c, counters)
+                            player.putDown(player.c, counters)
                     #Put down item
                     elif player.item != None:
-                        player.putDown(c, counters)
+                        player.putDown(player.c, counters)
                     action = False
                 if event.key == pygame.K_r:
                     if player == p1a:
                         player = p1b
+                        other = p1a
                     else:
                         player = p1a
+                        other = p1b
                     switch = False
-                    c = player.lookAtCounter(counters, screen)
+                    player.c = player.lookAtCounter(counters, screen)
 
         
         pressedKeys = pygame.key.get_pressed()
@@ -635,36 +674,51 @@ def playGame():
             break
             
         if pressedKeys[pygame.K_LEFT] == 1 or pressedKeys[pygame.K_a] == 1:
-            player.move('left', counters)
-            c = player.lookAtCounter(counters, screen)
+            player.move('left', counters, other)
+            player.c = player.lookAtCounter(counters, screen)
+            player.action = False
             
         if pressedKeys[pygame.K_RIGHT] == 1 or pressedKeys[pygame.K_d] == 1:
-            player.move('right', counters)
-            c = player.lookAtCounter(counters, screen)
+            player.move('right', counters, other)
+            player.c = player.lookAtCounter(counters, screen)
+            player.action = False
 
         if pressedKeys[pygame.K_UP] == 1 or pressedKeys[pygame.K_w] == 1:
-            player.move('up', counters)
-            c = player.lookAtCounter(counters, screen)
+            player.move('up', counters, other)
+            player.c = player.lookAtCounter(counters, screen)
+            player.action = False
 
         if pressedKeys[pygame.K_DOWN] == 1 or pressedKeys[pygame.K_s] == 1:
-            player.move('down', counters)
-            c = player.lookAtCounter(counters, screen)
+            player.move('down', counters, other)
+            player.c = player.lookAtCounter(counters, screen)
+            player.action = False
                 
         if pressedKeys[pygame.K_e] == 1:
-            if type(counters[c]) == CuttingBoard:
-                player.chop(c, counters)
-            elif type(counters[c]) == Wash:
-                player.wash(c, counters)
-            elif str(player.item) == 'Extinguisher':
-                player.extinguish(c, counters)
-        r = pygame.Rect(player.x-2, player.y-2, player.size+4, player.size+4)
+            player.action = True
+            
+        for p in players:    
+            if p.action == True:
+                if type(counters[p.c]) == CuttingBoard:
+                    p.chop(p.c, counters)
+                    if type(counters[p.c].item) == Food and counters[p.c].item.chopped == True:
+                        action = False
+                elif type(counters[p.c]) == Wash:
+                    p.wash(p.c, counters)
+                    if counters[p.c].plateCount == 0:
+                        action = False
+                elif str(p.item) == 'Extinguisher':
+                    p.extinguish(p.c, counters)
+                    aciton = False
+                
+                
+        r = pygame.Rect(player.x-2, player.y-2, player.width+4, player.height+4)
         pygame.draw.rect(screen, (255,255, 0), r)
         pygame.draw.rect(screen, (0,0,255), p1a.p)
         pygame.draw.rect(screen, (255,0,0), p1b.p)
-
-        if c != -1:
-            counter = counters[c]
-            pygame.draw.rect(screen, (255,230, 0), counter.r)
+        
+        if player.c != -1:
+            counter = counters[player.c]
+            pygame.draw.rect(screen, (255,230, 0), counter.r) 
             
         for p in players:
             if p.item != None:
@@ -676,11 +730,11 @@ def playGame():
                     if p.item.item != None:
                         drawFood(screen, p.lookX, p.lookY, p.item.item, False)
                         if type(p.item.item) == Dish:
-                            drawFood(screen, p.lookX-p.size//2, 
-                            p.lookY-p.size*2, p.item.item.food1, True)
-                            drawFood(screen, p.lookX+4*p.size//3, 
-                            p.lookY-p.size*2, p.item.item.food2, True)
-                            drawFood(screen, p.lookX-p.size//2, 
+                            drawFood(screen, p.lookX-p.width//2, 
+                            p.lookY-p.height*2, p.item.item.food1, True)
+                            drawFood(screen, p.lookX+4*p.width//3, 
+                            p.lookY-p.height*2, p.item.item.food2, True)
+                            drawFood(screen, p.lookX-p.width//2, 
                             p.lookY, p.item.item.food3, True)
                         elif p.item.item.chop > 0 and p.item.item.chopped == False:
                             r = pygame.Rect(p.lookX-5, p.lookY-10, 
@@ -689,11 +743,11 @@ def playGame():
                             
                 elif str(p.item) == 'Pot':
                     screen.blit(potImage,(p.lookX, p.lookY))
-                    drawFood(screen, p.lookX-p.size//2, 
-                    p.lookY-p.size*2, p.item.food1, True)
-                    drawFood(screen, p.lookX+4*p.size//3, 
-                    p.lookY-p.size*2, p.item.food2, True)
-                    drawFood(screen, p.lookX-p.size//2, 
+                    drawFood(screen, p.lookX-p.height//2, 
+                    p.lookY-p.width*2, p.item.food1, True)
+                    drawFood(screen, p.lookX+4*p.height//3, 
+                    p.lookY-p.width*2, p.item.food2, True)
+                    drawFood(screen, p.lookX-p.height//2, 
                     p.lookY, p.item.food3, True)
                     
                     if p.item.dish != None:
@@ -753,13 +807,13 @@ def playGame():
                             drawFood(screen, counter.left, 
                             counter.top,counter.item.item, False)
                             if type(counter.item.item) == Dish:
-                                drawFood(screen, counter.left-player.size//2, 
-                                counter.top-player.size*2, 
+                                drawFood(screen, counter.left-player.width//2, 
+                                counter.top-player.height*2, 
                                 counter.item.item.food1, True)
-                                drawFood(screen, counter.left+4*player.size//3, 
-                                counter.top-player.size*2, 
+                                drawFood(screen, counter.left+4*player.width//3, 
+                                counter.top-player.height*2, 
                                 counter.item.item.food2, True)
-                                drawFood(screen, counter.left-player.size//2, 
+                                drawFood(screen, counter.left-player.width//2, 
                                 counter.top, counter.item.item.food3, True)
                             elif counter.item.item.chop > 0 and \
                                counter.item.item.chopped == False:
@@ -822,32 +876,9 @@ def playGame():
         milliseconds += clock.tick(clock_tick_rate)
         
         pygame.display.flip()
-    gameover(counters[20].score)
+    return(counters[20].score)
 
-def gameover(scores):
-    screen = pygame.display.set_mode((1000,600), pygame.FULLSCREEN)
-    background = pygame.image.load("Images/GameOver.png")\
-                 .convert_alpha()
-    myfont = pygame.font.SysFont('Segoe UI Black', 30)
-    play = False
-    while(play==False):
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                play = True
-                
-            pressedKeys = pygame.key.get_pressed()
 
-            if pressedKeys[pygame.K_x] == 1:
-                play = True
-                
-        screen.blit(background,(0,0))
-        textsurface1 = myfont.render('Game Over', False, (0, 0, 0))
-        screen.blit(textsurface1,(400,250))
-        textsurface2 = myfont.render('Score: ' + str(scores), False, (0, 0, 0))
-        screen.blit(textsurface2,(420,300))
-        pygame.display.flip()
-        
-    pygame.quit()
     
     
     
