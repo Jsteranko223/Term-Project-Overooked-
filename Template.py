@@ -12,10 +12,36 @@ import Functions
 pygame.init()
 pygame.font.init()
 
+import socket
+import threading
+from queue import Queue
 
+
+HOST = "localhost" # put your IP address here if playing on multiple computers
+PORT = 50003
+
+server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+server.connect((HOST,PORT))
+print("connected to server")
+
+def handleServerMsg(server, serverMsg):
+  server.setblocking(1)
+  msg = ""
+  command = ""
+  while True:
+    msg += server.recv(10).decode("UTF-8")
+    command = msg.split("\n")
+    while (len(command) > 1):
+      readyMsg = command[0]
+      msg = "\n".join(command[1:])
+      serverMsg.put(readyMsg)
+      command = msg.split("\n")
+      
 class PygameGame(object):
 
     def keyPressed(self, keyCode, modifier):
+        msg = ''
         if keyCode == pygame.K_x:                    
             pygame.quit()
 
@@ -38,21 +64,31 @@ class PygameGame(object):
         if keyCode == pygame.K_q:   
             #Pick up with hands
             if self.player.item == None:
-                Functions.pickUp(self.player,self.player.c, self.counters)
+                Functions.pickUp(self.player,self.player.c, self.player.counters)
+                if type(self.player.item) == Classes.Food:
+                    msg = 'up %s %s %s \n' %(self.player.item.type, 
+                    self.player.item.chopped, self.player.item.chop)
             #Plate
             elif str(self.player.item) == 'Plate':
                 if self.player.item.item != None:
-                    Functions.putDown(self.player, self.player.c, self.counters)
-                elif str(self.counters[self.player.c].item) == 'Pot' and \
+                    Functions.putDown(self.player, self.player.c, self.player.counters)
+                elif str(self.player.counters[self.player.c].item) == 'Pot' and \
                         self.player.item.dirty == False and \
-                        self.counters[self.player.c].item.dish != None:
-                    Functions.pickUp(self.player, self.player.c, self.counters)
+                        self.player.counters[self.player.c].item.dish != None:
+                    Functions.pickUp(self.player, self.player.c, self.player.counters)
                 else:
-                    Functions.putDown(self.player, self.player.c, self.counters)
+                    Functions.putDown(self.player, self.player.c, self.player.counters)
             #Put down item
             elif self.player.item != None:
-                Functions.putDown(self.player, self.player.c, self.counters)
-    
+                Functions.putDown(self.player, self.player.c, self.player.counters)
+                if type(self.player.counters[self.player.c].item) == Classes.Food:
+                    msg = 'down %s %s %s \n' %(self.player.counters[self.player.c].item.type, 
+                    self.player.counters[self.player.c].item.chopped, self.player.counters[self.player.c].item.chop)
+        if (msg != ""):
+            print ("sending: ", msg,)
+            self.server.send(msg.encode())
+            msg = ''       
+
     def keyReleased(self, keyCode, modifier):
         if keyCode == pygame.K_s or keyCode == pygame.K_w:
             self.player.d[1] = 0
@@ -61,103 +97,155 @@ class PygameGame(object):
 
 
     def timerFired(self, dt):
-        
+        msg = ''
         clock = pygame.time.Clock()
         clock_tick_rate= 20
 
         if self.player.d[1] == -1:
-            self.player = Functions.move(self.player, 'down', self.counters)
+            self.player = Functions.move(self.player, 'down', self.player.counters)
+            msg = 'move %d %d %d \n' % (self.player.x, self.player.y, self.player.c)
+            if (msg != ""):
+                print ("sending: ", msg,)
+                self.server.send(msg.encode())
+                msg = ''
+                
         if self.player.d[1] == 1:
-            self.player = Functions.move(self.player, 'up', self.counters)
+            self.player = Functions.move(self.player, 'up', self.player.counters)
+            msg = 'move %d %d %d \n' % (self.player.x, self.player.y, self.player.c)
+            if (msg != ""):
+                print ("sending: ", msg,)
+                self.server.send(msg.encode())
+                msg = ''
+                
         if self.player.d[0] == -1:
-            self.player = Functions.move(self.player, 'left', self.counters)
+            self.player = Functions.move(self.player, 'left', self.player.counters)
+            msg = 'move %d %d %d \n' % (self.player.x, self.player.y, self.player.c)
+            if (msg != ""):
+                print ("sending: ", msg,)
+                self.server.send(msg.encode())
+                msg = ''
+                
         if self.player.d[0] == 1:
-            self.player = Functions.move(self.player, 'right', self.counters)
-        self.player.c = Functions.lookAtCounter(self.player, self.counters)
+            self.player = Functions.move(self.player, 'right', self.player.counters)
+            msg = 'move %d %d %d \n' % (self.player.x, self.player.y, self.player.c)
+            if (msg != ""):
+                print ("sending: ", msg,)
+                self.server.send(msg.encode())
+                msg = ''
+            
+        self.player.c = Functions.lookAtCounter(self.player, self.player.counters)
         
         if self.player.action == True:
-            if type(self.counters[self.player.c]) == Classes.CuttingBoard:
-                Functions.chop(self.player, self.player.c, self.counters)
-                if type(self.counters[self.player.c].item) == Classes.Food and \
-                self.counters[self.player.c].item.chopped == True:
+            if type(self.player.counters[self.player.c]) == Classes.CuttingBoard:
+                Functions.chop(self.player, self.player.c, self.player.counters)
+                if type(self.player.counters[self.player.c].item) == Classes.Food and \
+                self.player.counters[self.player.c].item.chopped == True:
                     self.player.action = False
-            elif type(self.counters[self.player.c]) == Classes.Wash:
-                Functions.wash(self.player, self.player.c, self.counters)
-                if self.counters[self.player.c].plateCount == 0:
+            elif type(self.player.counters[self.player.c]) == Classes.Wash:
+                Functions.wash(self.player, self.player.c, self.player.counters)
+                if self.player.counters[self.player.c].plateCount == 0:
                     self.player.action = False
             elif str(self.player.item) == 'Extinguisher':
-                Functions.extinguish(self.player, self.player.c, self.counters)
+                Functions.extinguish(self.player, self.player.c, self.player.counters)
 
-        Functions.cook(self.counters[35])
-        Functions.cook(self.counters[33])
+        Functions.cook(self.player.counters[35])
+        Functions.cook(self.player.counters[33])
         
         if self.milliseconds > 1000:
             self.seconds += 1
             self.milliseconds -= 1000
-            for i in range(len(self.counters[20].recipes)):
-                if self.counters[20].recipes[i] != None:
-                    self.counters[20].recipeTimes[i] += 1
+            for i in range(len(self.player.counters[20].recipes)):
+                if self.player.counters[20].recipes[i] != None:
+                    self.player.counters[20].recipeTimes[i] += 1
             if (self.timer-self.seconds) % 30 == 0:
-                for i in range(len(self.counters[20].recipes)):
-                    if self.counters[20].recipes[i] == None:
-                        self.counters[20].recipes[i] = Functions.generateRecipes()
+                for i in range(len(self.player.counters[20].recipes)):
+                    if self.player.counters[20].recipes[i] == None:
+                        self.player.counters[20].recipes[i] = Functions.generateRecipes()
                         break
                         
         self.milliseconds += clock.tick(clock_tick_rate)
         
+        while (serverMsg.qsize() > 0):
+            msg = serverMsg.get(False)
+            print("received: ", msg, "\n")
+            msg = msg.split()
+            command = msg[0]
+            
+            if command == '1' or command == '2':
+                p = int(msg[0])
+                command = msg[2]
+                
+            if (command == "myIDis"):
+                myPID = msg[1]+msg[2]
+                if myPID == 'Player1':
+                    self.player = Classes.Player(400,250)
+                    self.player.serverPlayer = 1
+                else:
+                    self.player = Classes.Player(650,250)
+                    self.player.serverPlayer = 2
+    
+            elif (command == "newPlayer"):
+                newPID = msg[1]+msg[2]
+                if newPID == 'Player1' and self.other == None:
+                    self.other = Classes.Player(400,250)
+                    self.other.serverPlayer = 1
+                else:
+                    self.other = Classes.Player(650,250)
+                    self.other.serverPlayer = 2
+            elif self.other != None:
+                if (command == "move") and self.player.serverPlayer != p:
+                    dx = int(msg[3])
+                    dy = int(msg[4])
+                    dc = int(msg[5])
+                    self.other.x = dx
+                    self.other.y = dy
+                    self.other.p = pygame.Rect(self.other.x, self.other.y, 
+                    self.other.width, self.other.height)
+                    self.other.lookX = self.other.x+self.other.width//4
+                    self.other.lookY = self.other.y+self.other.height//2 
+                    self.other.c = dc
+        
+                elif (command == "up") and self.player.serverPlayer != p :
+                    self.player.counters[self.other.c].item = None
+                    kind = msg[3]
+                    if kind == ('onion' or 'potato' or 'carrot'):
+                        chopped = msg[4]
+                        if chopped == 'False':
+                            chopped = False
+                        else:
+                            chopped = True
+                        chop = int(msg[5])
+                        self.other.item = Classes.Food(kind)
+                        self.other.item.chopped = chopped
+                        self.other.item.chop = chop
+                        
+                elif (command == "down") and self.player.serverPlayer != p :
+                    print(msg)
+                    kind = msg[3]
+                    if kind == ('onion' or 'potato' or 'carrot'):
+                        chopped = msg[4]
+                        if chopped == 'False':
+                            chopped = False
+                        else:
+                            chopped = True
+                        chop = int(msg[5])
+                        f = Classes.Food(kind)
+                        f.chopped = chopped
+                        f.chop = chop
+                        self.player.counters[self.other.c].item = f
+                        self.other.item = None
+                        
+            serverMsg.task_done()
+                
     def redrawAll(self, screen):
         screen.blit(self.backgroundImage, (0,0))
         pygame.draw.rect(screen, (0,0,255), self.player.p)
-        
-        if self.player.c != -1:
-            counter = self.counters[self.player.c]
-            pygame.draw.rect(screen, (255,230, 0), counter.r)
+        if self.other != None:
+            pygame.draw.rect(screen, (0,255, 0), self.other.p)
+            Functions.drawPlayer(self.other, screen, self.player.counters)
+        Functions.drawPlayer(self.player, screen, self.player.counters)
             
-        if self.player.item != None:
-            if str(self.player.item) == 'Plate':
-                if self.player.item.dirty == False:
-                    screen.blit(self.plateImage,(self.player.lookX,self.player.lookY))
-                else:
-                    screen.blit(self.dirtyPlateImage, (self.player.lookX, self.player.lookY))
-                if self.player.item.item != None:
-                    Functions.drawFood(screen, self.player.lookX, \
-                    self.player.lookY, self.player.item.item, False)
-                    if type(self.player.item.item) == Classes.Dish:
-                        Functions.drawFood(screen, self.player.lookX-self.player.width//2, 
-                        self.player.lookY-self.player.height*2, self.player.item.item.food1, True)
-                        Functions.drawFood(screen, self.player.lookX+4*self.player.width//3, 
-                        self.player.lookY-self.player.height*2, self.player.item.item.food2, True)
-                        Functions.drawFood(screen, self.player.lookX-self.player.width//2, 
-                        self.player.lookY, self.player.item.item.food3, True)
-                    elif self.player.item.item.chop > 0 and self.player.item.item.chopped == False:
-                        r = pygame.Rect(self.player.lookX-5, self.player.lookY-10, 
-                                    self.player.item.item.chop, 10)
-                        pygame.draw.rect(screen, (0,255,0), r)
-                        
-            elif str(self.player.item) == 'Pot':
-                screen.blit(self.potImage,(self.player.lookX, self.player.lookY))
-                Functions.drawFood(screen, self.player.lookX-self.player.height//2, 
-                self.player.lookY-self.player.width*2, self.player.item.food1, True)
-                Functions.drawFood(screen, self.player.lookX+4*self.player.height//3, 
-                self.player.lookY-self.player.width*2, self.player.item.food2, True)
-                Functions.drawFood(screen, self.player.lookX-self.player.height//2, 
-                self.player.lookY, self.player.item.food3, True)
-                
-                if self.player.item.dish != None:
-                   Functions.drawFood(screen, self.player.lookX, 
-                   self.player.lookY, self.player.item.dish, False)
-
-            elif str(self.player.item) == 'Extinguisher':
-                    screen.blit(self.extinguisherImage,(self.player.lookX,self.player.lookY))
-            else:
-                Functions.drawFood(screen, self.player.lookX, self.player.lookY, self.player.item, False)
-                if self.player.item.chop > 0 and self.player.item.chopped == False:
-                    r = pygame.Rect(self.player.lookX-5, self.player.lookY-10, 
-                                self.player.item.chop, 10)
-                    pygame.draw.rect(screen, (0,255,0), r)
-                        
-                        
-        for counter in self.counters:
+        for counter in self.player.counters:
             if type(counter) == Classes.PlateReturn or type(counter) == Classes.Wash:
                 if counter.plateCount != 0:
                     screen.blit(self.dirtyPlateImage,(counter.left,counter.top))
@@ -252,7 +340,7 @@ class PygameGame(object):
                     r = pygame.Rect(counter.left-5, counter.top-10, progress, 10)
                     pygame.draw.rect(screen, (0,255,0), r)
                     
-        textsurface = self.myfont.render(str(self.counters[20].score), False, (0, 0, 0))
+        textsurface = self.myfont.render(str(self.player.counters[20].score), False, (0, 0, 0))
         screen.blit(textsurface,(40,500))
 
         textsurface1 = self.myfont.render(str(self.timer-self.seconds), False, (0, 0, 0))
@@ -263,14 +351,13 @@ class PygameGame(object):
         ''' return whether a specific key is being held '''
         return self._keys.get(key, False)
 
-    def __init__(self, width=1000, height=600, fps=40, title="Overcooked"):
+    def __init__(self, serverMsg, server, width=1000, height=600, fps=40, title="Overcooked"):
         self.width = width
         self.height = height
         self.fps = fps
         self.title = title
         self.myfont = pygame.font.SysFont('Segoe UI Black', 30)
-        screen = pygame.display.set_mode((1000,600), pygame.FULLSCREEN)
-        self.counters = Functions.makeCounters()
+        screen = pygame.display.set_mode((1000,600))
         self.backgroundImage = pygame.image.load("Images/BackgroundFinal.png").convert_alpha()
         self.plateImage = pygame.image.load("Images/Plate.png").convert_alpha()
         self.dirtyPlateImage = pygame.image.load("Images/DirtyPlate.png").convert_alpha()
@@ -278,39 +365,33 @@ class PygameGame(object):
                             .convert_alpha()
         self.potImage = pygame.image.load("Images/Pot.png").convert_alpha()
         self.fireImage = pygame.image.load("Images/Fire.png").convert_alpha()
+        
         self.player = Classes.Player(400,250)
+
         
         self.seconds = 0
         self.milliseconds = 0
         self.timer = 180
-
-
+        
+        self.server = server
+        self.serverMsg = serverMsg
+        self.other = None
+        
     def run(self):
         clock = pygame.time.Clock()
-        screen = pygame.display.set_mode((1000,600), pygame.FULLSCREEN)
+        screen = pygame.display.set_mode((1000,600))
         # set the title of the window
         pygame.display.set_caption(self.title)
         # stores all the keys currently being held down
         self._keys = dict()
 
         # call game-specific initialization
-        self.init()
         playing = True
         while playing:
             time = clock.tick(self.fps)
             self.timerFired(time)
             for event in pygame.event.get():
-                if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                    self.mousePressed(*(event.pos))
-                elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
-                    self.mouseReleased(*(event.pos))
-                elif (event.type == pygame.MOUSEMOTION and
-                      event.buttons == (0, 0, 0)):
-                    self.mouseMotion(*(event.pos))
-                elif (event.type == pygame.MOUSEMOTION and
-                      event.buttons[0] == 1):
-                    self.mouseDrag(*(event.pos))
-                elif event.type == pygame.KEYDOWN:
+                if event.type == pygame.KEYDOWN:
                     self._keys[event.key] = True
                     self.keyPressed(event.key, event.mod)
                 elif event.type == pygame.KEYUP:
@@ -323,6 +404,16 @@ class PygameGame(object):
 
         pygame.quit()
 
+serverMsg = Queue(1000)
+threading.Thread(target = handleServerMsg, args = (server, serverMsg)).start()
 
-game = PygameGame()
+game = PygameGame(serverMsg, server)
 game.run()
+
+
+
+
+
+
+
+
