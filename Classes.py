@@ -59,7 +59,7 @@ class Stove(Counter):
                     food = [str(self.item.food1), str(self.item.food2), 
                             str(self.item.food3)]
                     if food.count('onion') == 3:
-                        self.item.dish = Dish('onion soup')
+                        self.item.dish = Dish('onionsoup')
                         self.item.dish.food1 = Food(food[0])
                         self.item.dish.food2 = Food(food[1])
                         self.item.dish.food3 = Food(food[2])
@@ -79,6 +79,9 @@ class Serve(Counter):
         self.recipes = [Functions.generateRecipes(), None, None, None]
         self.recipeTimes = [0,0,0,0]
         self.score = 0
+        self.seconds = 0
+        self.milliseconds = 0
+        self.timer = 180
 
 class CuttingBoard(Counter):
     pass
@@ -135,8 +138,8 @@ class Player(object):
     def __init__(self, x, y):
         self.x = x
         self.y = y
-        self.width = 15
-        self.height = 15
+        self.width = 30
+        self.height = 30
         self.speed = 10
         self.p = pygame.Rect(self.x, self.y, self.width, self.height)
         self.lookX = self.x+self.width//4
@@ -146,6 +149,9 @@ class Player(object):
         self.action = False
         self.c = -1
         self.d = [0,0]
+        self.serverPlayer = -1
+        self.counters = Functions.makeCounters()
+        self.character = None
         
         
         

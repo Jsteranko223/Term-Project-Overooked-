@@ -7,6 +7,6 @@ import GameOver
 Intro.intro()
 players = GameModeSelection.gameModeSelection()
 Rules.rules()
-score = PlayGame.playGame(players)
+score = PlayGame.playGame(1)
 GameOver.gameover(score)
 

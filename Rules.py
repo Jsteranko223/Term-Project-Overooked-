@@ -3,7 +3,7 @@ import pygame
 pygame.init()
 
 def rules():
-    screen = pygame.display.set_mode((1000,600), pygame.FULLSCREEN)
+    screen = pygame.display.set_mode((1000,600))
     background = pygame.image.load("Images/RulesBackground.png")\
                  .convert_alpha()
 

@@ -2,9 +2,9 @@ import pygame
 
 pygame.init()
 
-def intro():
+def gameModeSelection():
     screen = pygame.display.set_mode((1000,600))
-    background = pygame.image.load("Images/SplashBackground.png")\
+    background = pygame.image.load("Images/ModeBackground.png")\
                  .convert_alpha()
 
     play = False
@@ -16,9 +16,10 @@ def intro():
                 
             pressedKeys = pygame.key.get_pressed()
 
-            if pressedKeys[pygame.K_x] == 1:
-                play = True
+            if pressedKeys[pygame.K_1] == 1:
+                return(1)
+            elif pressedKeys[pygame.K_2] == 1:
+                return(2)
                 
         screen.blit(background,(0,0))
-
         pygame.display.flip()

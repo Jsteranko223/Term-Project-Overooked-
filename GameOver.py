@@ -3,7 +3,7 @@ import pygame
 pygame.init()
 
 def gameover(scores):
-    screen = pygame.display.set_mode((1000,600), pygame.FULLSCREEN)
+    screen = pygame.display.set_mode((1000,600))
     background = pygame.image.load("Images/GameOver.png")\
                  .convert_alpha()
     myfont = pygame.font.SysFont('Segoe UI Black', 30)

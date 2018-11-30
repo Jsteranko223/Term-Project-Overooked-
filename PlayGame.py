@@ -134,8 +134,8 @@ class Player(object):
     def __init__(self, x, y):
         self.x = x
         self.y = y
-        self.width = 15
-        self.height = 15
+        self.width = 30
+        self.height = 30
         self.speed = 10
         self.p = pygame.Rect(self.x, self.y, self.width, self.height)
         self.lookX = self.x+self.width//4
@@ -144,6 +144,7 @@ class Player(object):
         self.item = None
         self.action = False
         self.c = -1
+        self.character = (0,0,255)
 
     def move(self, key, counters, player):
         if key == 'left':
@@ -596,7 +597,7 @@ def generateRecipes():
     lst = [Dish('onion soup'), Dish('stew')]
     return(lst[random.randint(0,1)])
    
-def playGame(playerCount):
+def playGame(playerCount, character):
     clock_tick_rate= 20
     screen = pygame.display.set_mode((1000,600), pygame.FULLSCREEN)
     clock = pygame.time.Clock()
@@ -621,6 +622,16 @@ def playGame(playerCount):
         players = [p1a, p1b]
     else:
         p1a = Player(400,250)
+    s = "Images/"+character+".png"
+    p1a.character = pygame.image.load(s).convert_alpha()
+    
+    if character == ('Snowman'):
+        p1b.character = pygame.image.load("Images/Penguin.png")\
+                            .convert_alpha()
+    else:
+        p1b.character = pygame.image.load("Images/Snowman.png")\
+                            .convert_alpha()
+    
         
     counters = makeCounters()
     
@@ -710,11 +721,9 @@ def playGame(playerCount):
                     p.extinguish(p.c, counters)
                     aciton = False
                 
-                
-        r = pygame.Rect(player.x-2, player.y-2, player.width+4, player.height+4)
-        pygame.draw.rect(screen, (255,255, 0), r)
-        pygame.draw.rect(screen, (0,0,255), p1a.p)
-        pygame.draw.rect(screen, (255,0,0), p1b.p)
+        screen.blit(p1a.character,(p1a.x-25,p1a.y-25))
+        screen.blit(p1b.character,(p1b.x-25,p1b.y-25))
+
         
         if player.c != -1:
             counter = counters[player.c]
@@ -730,11 +739,11 @@ def playGame(playerCount):
                     if p.item.item != None:
                         drawFood(screen, p.lookX, p.lookY, p.item.item, False)
                         if type(p.item.item) == Dish:
-                            drawFood(screen, p.lookX-p.width//2, 
-                            p.lookY-p.height*2, p.item.item.food1, True)
-                            drawFood(screen, p.lookX+4*p.width//3, 
-                            p.lookY-p.height*2, p.item.item.food2, True)
-                            drawFood(screen, p.lookX-p.width//2, 
+                            drawFood(screen, p.lookX-p.width//4, 
+                            p.lookY-p.height, p.item.item.food1, True)
+                            drawFood(screen, p.lookX+4*p.width//6, 
+                            p.lookY-p.height, p.item.item.food2, True)
+                            drawFood(screen, p.lookX-p.width//4, 
                             p.lookY, p.item.item.food3, True)
                         elif p.item.item.chop > 0 and p.item.item.chopped == False:
                             r = pygame.Rect(p.lookX-5, p.lookY-10, 
@@ -743,11 +752,11 @@ def playGame(playerCount):
                             
                 elif str(p.item) == 'Pot':
                     screen.blit(potImage,(p.lookX, p.lookY))
-                    drawFood(screen, p.lookX-p.height//2, 
-                    p.lookY-p.width*2, p.item.food1, True)
-                    drawFood(screen, p.lookX+4*p.height//3, 
-                    p.lookY-p.width*2, p.item.food2, True)
-                    drawFood(screen, p.lookX-p.height//2, 
+                    drawFood(screen, p.lookX-p.height//4, 
+                    p.lookY-p.width, p.item.food1, True)
+                    drawFood(screen, p.lookX+4*p.height//6, 
+                    p.lookY-p.width, p.item.food2, True)
+                    drawFood(screen, p.lookX-p.height//4, 
                     p.lookY, p.item.food3, True)
                     
                     if p.item.dish != None:
@@ -807,13 +816,13 @@ def playGame(playerCount):
                             drawFood(screen, counter.left, 
                             counter.top,counter.item.item, False)
                             if type(counter.item.item) == Dish:
-                                drawFood(screen, counter.left-player.width//2, 
-                                counter.top-player.height*2, 
+                                drawFood(screen, counter.left-player.width//4, 
+                                counter.top-player.height, 
                                 counter.item.item.food1, True)
-                                drawFood(screen, counter.left+4*player.width//3, 
-                                counter.top-player.height*2, 
+                                drawFood(screen, counter.left+4*player.width//6, 
+                                counter.top-player.height, 
                                 counter.item.item.food2, True)
-                                drawFood(screen, counter.left-player.width//2, 
+                                drawFood(screen, counter.left-player.width//4, 
                                 counter.top, counter.item.item.food3, True)
                             elif counter.item.item.chop > 0 and \
                                counter.item.item.chopped == False:
@@ -877,22 +886,3 @@ def playGame(playerCount):
         
         pygame.display.flip()
     return(counters[20].score)
-
-
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-        

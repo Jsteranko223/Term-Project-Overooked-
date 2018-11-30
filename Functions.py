@@ -6,6 +6,59 @@ import Classes
 pygame.init()
 pygame.font.init()
 
+def drawPlayer(player, screen, counters):
+    plateImage = pygame.image.load("Images/Plate.png").convert_alpha()
+    dirtyPlateImage = pygame.image.load("Images/DirtyPlate.png").convert_alpha()
+    extinguisherImage = pygame.image.load("Images/ExtinguisherFinal.png")\
+                            .convert_alpha()
+    potImage = pygame.image.load("Images/Pot.png").convert_alpha()
+    fireImage = pygame.image.load("Images/Fire.png").convert_alpha()
+    if player.c != -1:
+        counter = counters[player.c]
+        pygame.draw.rect(screen, (255,230, 0), counter.r)
+    if player.item != None:
+        if str(player.item) == 'Plate':
+            if player.item.dirty == False:
+                screen.blit(plateImage,(player.lookX,player.lookY))
+            else:
+                screen.blit(dirtyPlateImage, (player.lookX, player.lookY))
+            if player.item.item != None:
+                drawFood(screen, player.lookX, \
+                player.lookY, player.item.item, False)
+                if type(player.item.item) == Classes.Dish:
+                    drawFood(screen, player.lookX-player.width//4, 
+                    player.lookY-player.height, player.item.item.food1, True)
+                    drawFood(screen, player.lookX+2*player.width//3, 
+                    player.lookY-player.height, player.item.item.food2, True)
+                    drawFood(screen, player.lookX-player.width//4, 
+                    player.lookY, player.item.item.food3, True)
+                elif player.item.item.chop > 0 and player.item.item.chopped == False:
+                    r = pygame.Rect(player.lookX-5, player.lookY-10, 
+                                player.item.item.chop, 10)
+                    pygame.draw.rect(screen, (0,255,0), r)
+                    
+        elif str(player.item) == 'Pot':
+            screen.blit(potImage,(player.lookX, player.lookY))
+            drawFood(screen, player.lookX-player.height//4, 
+            player.lookY-player.width, player.item.food1, True)
+            drawFood(screen, player.lookX+2*player.height//3, 
+            player.lookY-player.width, player.item.food2, True)
+            drawFood(screen, player.lookX-player.height//4, 
+            player.lookY, player.item.food3, True)
+            
+            if player.item.dish != None:
+                drawFood(screen, player.lookX, 
+                player.lookY, player.item.dish, False)
+
+        elif str(player.item) == 'Extinguisher':
+                screen.blit(extinguisherImage,(player.lookX,player.lookY))
+        else:
+            drawFood(screen, player.lookX, player.lookY, player.item, False)
+            if player.item.chop > 0 and player.item.chopped == False:
+                r = pygame.Rect(player.lookX-5, player.lookY-10, 
+                            player.item.chop, 10)
+                pygame.draw.rect(screen, (0,255,0), r)
+
 def cook(p):
     if str(p.item) == 'Pot':
         if p.item.food1 != None and str(p.item.food1) != 'fire' and \
@@ -17,7 +70,7 @@ def cook(p):
                 food = [str(p.item.food1), str(p.item.food2), 
                         str(p.item.food3)]
                 if food.count('onion') == 3:
-                    p.item.dish = Classes.Dish('onion soup')
+                    p.item.dish = Classes.Dish('onionsoup')
                     p.item.dish.food1 = Classes.Food(food[0])
                     p.item.dish.food2 = Classes.Food(food[1])
                     p.item.dish.food3 = Classes.Food(food[2])
@@ -30,6 +83,7 @@ def cook(p):
     return p
                     
 def move(p, key, counters):
+    fall = None
     if key == 'left':
         p.x -= p.speed
         p.lookX = p.x-p.width//2
@@ -69,9 +123,12 @@ def move(p, key, counters):
         (p.y<300  and p.x > 740):
         p.x = 400
         p.y = 250
+        fall = 'true'
         if str(p.item) == 'Plate':
             counters[19].plateCount += 1
+            fall = 'Plate'
         elif str(p.item) == 'Extinguisher':
+            fall = 'Extinguisher'
             if str(counters[30].item) == 'Plate':
                 counters[19].plateCount += 1
             elif str(counters[30].item) == 'Pot':
@@ -81,6 +138,7 @@ def move(p, key, counters):
                     counters[35].item = Classes.Pot()
             counters[30].item = Classes.Extinguisher()
         elif str(p.item) == 'Pot':
+            fall = 'Pot'
             if counters[33].item == None:
                 counters[33].item = Classes.Pot()
             elif counters[35].item == None:
@@ -91,7 +149,7 @@ def move(p, key, counters):
                             p.height//2)
     p.p = pygame.Rect(p.x, p.y, p.width, p.height)
     
-    return p
+    return p, fall
 
 def detectCollision(p, px, py, pwidth, pheight, other):
     if type(other) == Classes.Player:
@@ -420,7 +478,7 @@ def getImage(s, chopped, raw):
         elif s == 'potato':
             image = pygame.image.load("Images/CookingPotato.png")\
                     .convert_alpha()
-        elif s == 'onion soup':
+        elif s == 'onionsoup':
             image = pygame.image.load("Images/RecipeOnionSoup.png").convert_alpha()
         elif s == 'stew':
             image = pygame.image.load("Images/RecipeStew.png").convert_alpha()
@@ -430,7 +488,7 @@ def getImage(s, chopped, raw):
             image = pygame.image.load("Images/CookingFire.png").convert_alpha()
 
     else:
-        if s == 'onion soup' or s == 'stew':
+        if s == 'onionsoup' or s == 'stew':
             image = pygame.image.load("Images/OnionSoup.png").convert_alpha()
         elif s == 'onion':
             if chopped == False:
@@ -467,7 +525,7 @@ def drawFood(screen, x,y, item, stove):
     
 
 def generateRecipes():
-    lst = [Classes.Dish('onion soup'), Classes.Dish('stew')]
+    lst = [Classes.Dish('onionsoup'), Classes.Dish('stew')]
     return(lst[random.randint(0,1)])  
         
 
