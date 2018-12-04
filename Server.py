@@ -15,7 +15,7 @@ BACKLOG = 4
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM) 
 server.bind((HOST,PORT))
 server.listen(BACKLOG)
-print("looking for connection")
+#print("looking for connection")
 
 def handleClient(client, serverChannel, cID, clientele):
   client.setblocking(1)
@@ -36,7 +36,7 @@ def handleClient(client, serverChannel, cID, clientele):
 def serverThread(clientele, serverChannel):
   while True:
     msg = serverChannel.get(True, None)
-    print("msg recv: ", msg)
+    #print("msg recv: ", msg)
     msgList = msg.split(" ")
     senderID = msgList[0]
     instruction = msgList[1]
@@ -46,8 +46,8 @@ def serverThread(clientele, serverChannel):
         if cID != senderID:
           sendMsg = instruction + " " + senderID + " " + details + "\n"
           clientele[cID].send(sendMsg.encode())
-          print("> sent to %s:" % cID, sendMsg[:-1])
-    print()
+          #print("> sent to %s:" % cID, sendMsg[:-1])
+    #print()
     serverChannel.task_done()
 
 clientele = dict()
@@ -62,14 +62,14 @@ while True:
   client, address = server.accept()
   # myID is the key to the client in the clientele dictionary
   myID = names[playerNum]
-  print(myID, playerNum)
+  #print(myID, playerNum)
   for cID in clientele:
-    print (repr(cID), repr(playerNum))
+    #print (repr(cID), repr(playerNum))
     clientele[cID].send(("newPlayer %s\n" % myID).encode())
     client.send(("newPlayer %s\n" % cID).encode())
   clientele[myID] = client
   client.send(("myIDis %s \n" % myID).encode())
-  print("connection recieved from %s" % myID)
+  #print("connection recieved from %s" % myID)
   threading.Thread(target = handleClient, args = 
                         (client ,serverChannel, myID, clientele)).start()
   playerNum += 1

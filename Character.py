@@ -16,8 +16,6 @@ def character():
                 
             pressedKeys = pygame.key.get_pressed()
 
-            if pressedKeys[pygame.K_x] == 1:
-                play = True
             if pressedKeys[pygame.K_1] == 1:
                 return('Snowman')
             if pressedKeys[pygame.K_2] == 1:

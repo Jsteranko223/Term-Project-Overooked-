@@ -44,15 +44,12 @@ class Stove(Counter):
         super().__init__(left, top, right, bottom)
         self.item = Pot()
         
-    def cook(self, screen):
+    def cook(self):
         if str(self.item) == 'Pot':
             if self.item.food1 != None and str(self.item.food1) != 'fire' and \
                self.item.fire <= 40:
                 if self.item.cook > 0:
                     self.item.cook -= 1
-                progress = 50*(1 - (self.item.cook/self.item.cookTime))
-                r = pygame.Rect(self.left-5, self.top-10, progress, 10)
-                pygame.draw.rect(screen, (0,255,0), r)
                 if self.item.cook == 0:
                     self.item.fire += 1
                     food = [str(self.item.food1), str(self.item.food2), 
@@ -68,6 +65,12 @@ class Stove(Counter):
                         self.item.dish.food1 = Food(food[0])
                         self.item.dish.food2 = Food(food[1])
                         self.item.dish.food3 = Food(food[2])
+                    elif food.count('potato') == 2 and \
+                            food.count('carrot') == 1:
+                        self.item.dish = Classes.Dish('potatocarrot')
+                        self.item.dish.food1 = Classes.Food(food[0])
+                        self.item.dish.food2 = Classes.Food(food[1])
+                        self.item.dish.food3 = Classes.Food(food[2])
             
 class Trash(Counter):
     pass
@@ -145,25 +148,32 @@ class Player(object):
         self.action = False
         self.c = -1
         self.character = (0,0,255)
+        self.dash = False
+        self.s = ''
+        self.playerNumber = ''
 
     def move(self, key, counters, player):
+        if self.dash == True:
+            modifier = 4
+        else:
+            modifier = 1
         if key == 'left':
-            self.x -= self.speed
+            self.x -= self.speed*modifier
             self.lookX = self.x-self.width//2
             self.lookY = self.y+self.height//4
             self.direction = 'left'
         if key == 'right':
-            self.x += self.speed
+            self.x += self.speed*modifier
             self.lookX = self.x+self.width
             self.lookY = self.y+self.height//4
             self.direction = 'right'
         if key == 'up':
-            self.y -= self.speed
+            self.y -= self.speed*modifier
             self.lookX = self.x+self.width//4
             self.lookY = self.y-self.height//2
             self.direction = 'up'
         if key == 'down':
-            self.y += self.speed
+            self.y += self.speed*modifier
             self.lookX = self.x+self.width//4
             self.lookY = self.y+self.height
             self.direction = 'down'
@@ -171,34 +181,49 @@ class Player(object):
         for counter in counters:
             if self.detectCollision(self.x, self.y, self.width, self.height, counter):
                 if key == 'left':
-                    self.x += self.speed
+                    self.x += self.speed*modifier
                     
                 if key == 'right':
-                    self.x -= self.speed
+                    self.x -= self.speed*modifier
 
                 if key == 'up':
-                    self.y += self.speed
+                    self.y += self.speed*modifier
                     
                 if key == 'down':
-                    self.y -= self.speed
+                    self.y -= self.speed*modifier
         
         if self.detectCollision(self.x, self.y, self.width,self.height, player):
             if key == 'left':
-                self.x += self.speed
+                self.x += self.speed*modifier
                 
             if key == 'right':
-                self.x -= self.speed
+                self.x -= self.speed*modifier
 
             if key == 'up':
-                self.y += self.speed
+                self.y += self.speed*modifier
                 
             if key == 'down':
-                self.y -= self.speed
+                self.y -= self.speed*modifier
                 
-        if self.x < 235 or (self.y > 300 and self.x > 790) or \
-          (self.y<300  and self.x > 740):
+        if self.x < 240 or (self.y > 500 and self.x > 790) or (self.y <500 and self.x > 750) or \
+        (self.y<300  and self.x > 725): 
             self.x = 400
             self.y = 250
+            if self.playerNumber == 'a':
+                self.x = 400
+                self.y = 250
+                if self.detectCollision(self.x, self.y, self.width,
+                    self.height, player):
+                    self.x = 650
+                    self.y = 250
+            elif self.playerNumber == 'b':
+                self.x = 650
+                self.y = 250
+                if self.detectCollision(self.x, self.y, self.width,
+                    self.height, player):
+                    self.x = 400
+                    self.y = 250
+                
             if str(self.item) == 'Plate':
                 counters[19].plateCount += 1
             elif str(self.item) == 'Extinguisher':
@@ -336,9 +361,16 @@ class Player(object):
                                 for i in range(len(counters[20].recipes)):
                                     if str(self.item.item) == \
                                        str(counters[20].recipes[i]):
+                                        if counters[20].recipeTimes[i] > 45:
+                                            counters[20].score += 1
+                                        elif counters[20].recipeTimes[i] > 30:
+                                            counters[20].score += 2
+                                        elif counters[20].recipeTimes[i] > 15:
+                                            counters[20].score += 3
+                                        else:
+                                            counters[20].score += 4
                                         counters[20].recipes[i] = None
                                         counters[20].recipeTimes[i] = 0
-                                        counters[20].score += 1
                                         #Add new recipe
                                         if counters[20].recipes.count(None) == 4:
                                             counters[20].recipes[0] = generateRecipes()
@@ -360,17 +392,25 @@ class Player(object):
                             if str(counters[c].item) == 'Pot' and \
                                counters[c].item.fire < 40:
                                 if self.item.item.chopped == True:
-                                    counters[c].item.cook += 100
-                                    counters[c].item.cookTime += 100
                                     if counters[c].item.food1 == None:
                                         counters[c].item.food1 = self.item.item
                                         self.item.item = None
+                                        counters[c].item.cook += 100
+                                        counters[c].item.cookTime += 100
+                                        counters[c].item.fire = 0
                                     elif counters[c].item.food2 == None:
                                         counters[c].item.food2 = self.item.item
+                                        counters[c].item.fire = 0
                                         self.item.item = None
+                                        counters[c].item.cook += 100
+                                        counters[c].item.cookTime += 100
                                     elif counters[c].item.food3 == None:
                                         counters[c].item.food3 = self.item.item
+                                        counters[c].item.fire = 0
                                         self.item.item = None
+                                        counters[c].item.cook += 100
+                                        counters[c].item.cookTime += 100
+                                        
                          #Throw away food on plate               
                         elif type(counters[c]) == Trash:  
                             self.item.item = None
@@ -397,16 +437,23 @@ class Player(object):
                 if str(counters[c].item) == 'Pot' and \
                    counters[c].item.fire < 40: #Put food in pot
                     if self.item.chopped == True:
-                        counters[c].item.cook += 100
-                        counters[c].item.cookTime += 100
                         if counters[c].item.food1 == None:
                             counters[c].item.food1 = self.item
+                            counters[c].item.fire = 0
                             self.item = None
+                            counters[c].item.cook += 100
+                            counters[c].item.cookTime += 100
                         elif counters[c].item.food2 == None:
                             counters[c].item.food2 = self.item
+                            counters[c].item.fire = 0
+                            counters[c].item.cook += 100
+                            counters[c].item.cookTime += 100
                             self.item = None
                         elif counters[c].item.food3 == None:
                             counters[c].item.food3 = self.item
+                            counters[c].item.fire = 0
+                            counters[c].item.cook += 100
+                            counters[c].item.cookTime += 100
                             self.item = None
                         
                 elif counters[c].item == None and \
@@ -551,13 +598,15 @@ def getImage(s, chopped, raw):
             image = pygame.image.load("Images/RecipeOnionSoup.png").convert_alpha()
         elif s == 'stew':
             image = pygame.image.load("Images/RecipeStew.png").convert_alpha()
+        elif s == 'potatocarrot':
+            image = pygame.image.load("Images/RecipePotatoCarrot.png").convert_alpha()
         elif s == 'None':
             image = pygame.image.load("Images/Empty.png").convert_alpha()
         elif s == 'fire':
             image = pygame.image.load("Images/CookingFire.png").convert_alpha()
 
     else:
-        if s == 'onion soup' or s == 'stew':
+        if s == 'onion soup' or s == 'stew' or s == 'potatocarrot':
             image = pygame.image.load("Images/OnionSoup.png").convert_alpha()
         elif s == 'onion':
             if chopped == False:
@@ -594,8 +643,8 @@ def drawFood(screen, x,y, item, stove):
     
 
 def generateRecipes():
-    lst = [Dish('onion soup'), Dish('stew')]
-    return(lst[random.randint(0,1)])
+    lst = [Dish('onion soup'), Dish('stew'), Dish('potatocarrot')]
+    return(lst[random.randint(0,2)])
    
 def playGame(playerCount, character):
     clock_tick_rate= 20
@@ -614,25 +663,26 @@ def playGame(playerCount, character):
     myfont = pygame.font.SysFont('Segoe UI Black', 30)
 
     dead = False
-    if playerCount == 1:
-        p1a = Player(400,250)
-        p1b = Player(600,250)
-        player = p1a
-        other = p1b
-        players = [p1a, p1b]
-    else:
-        p1a = Player(400,250)
-    s = "Images/"+character+".png"
+    p1a = Player(400,250)
+    p1b = Player(600,250)
+    player = p1a
+    other = p1b
+    players = [p1a, p1b]
+    p1a.s = character
+    s = "Images/"+p1a.s+"Right.png"
     p1a.character = pygame.image.load(s).convert_alpha()
     
     if character == ('Snowman'):
-        p1b.character = pygame.image.load("Images/Penguin.png")\
+        p1b.s = 'Penguin'
+        p1b.character = pygame.image.load("Images/PenguinRight.png")\
                             .convert_alpha()
     else:
-        p1b.character = pygame.image.load("Images/Snowman.png")\
+        p1b.s = 'Snowman'
+        p1b.character = pygame.image.load("Images/SnowmanRight.png")\
                             .convert_alpha()
-    
-        
+    p1a.playerNumber = 'a'
+    p1b.playerNumber = 'b'
+
     counters = makeCounters()
     
     switch = False
@@ -640,8 +690,9 @@ def playGame(playerCount, character):
     
     seconds = 0
     milliseconds = 0
-    timer = 360
-    
+    timer = 180
+    pygame.mixer.music.load('Images/music.wav')
+    pygame.mixer.music.play(-1)
     while(dead==False):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -675,6 +726,8 @@ def playGame(playerCount, character):
                         other = p1b
                     switch = False
                     player.c = player.lookAtCounter(counters, screen)
+                elif event.key == pygame.K_SPACE:
+                    player.dash = True
 
         
         pressedKeys = pygame.key.get_pressed()
@@ -683,16 +736,19 @@ def playGame(playerCount, character):
 
         if pressedKeys[pygame.K_x] == 1 or (timer-seconds) <= 0:
             break
-            
         if pressedKeys[pygame.K_LEFT] == 1 or pressedKeys[pygame.K_a] == 1:
             player.move('left', counters, other)
             player.c = player.lookAtCounter(counters, screen)
             player.action = False
+            s = "Images/"+player.s+"Left.png"
+            player.character = pygame.image.load(s).convert_alpha()
             
         if pressedKeys[pygame.K_RIGHT] == 1 or pressedKeys[pygame.K_d] == 1:
             player.move('right', counters, other)
             player.c = player.lookAtCounter(counters, screen)
             player.action = False
+            s = "Images/"+player.s+"Right.png"
+            player.character = pygame.image.load(s).convert_alpha()
 
         if pressedKeys[pygame.K_UP] == 1 or pressedKeys[pygame.K_w] == 1:
             player.move('up', counters, other)
@@ -706,6 +762,8 @@ def playGame(playerCount, character):
                 
         if pressedKeys[pygame.K_e] == 1:
             player.action = True
+        
+        player.dash = False
             
         for p in players:    
             if p.action == True:
@@ -720,58 +778,10 @@ def playGame(playerCount, character):
                 elif str(p.item) == 'Extinguisher':
                     p.extinguish(p.c, counters)
                     aciton = False
-                
-        screen.blit(p1a.character,(p1a.x-25,p1a.y-25))
-        screen.blit(p1b.character,(p1b.x-25,p1b.y-25))
-
-        
         if player.c != -1:
             counter = counters[player.c]
-            pygame.draw.rect(screen, (255,230, 0), counter.r) 
+            pygame.draw.rect(screen, (255,230, 0), counter.r)   
             
-        for p in players:
-            if p.item != None:
-                if str(p.item) == 'Plate':
-                    if p.item.dirty == False:
-                        screen.blit(plateImage,(p.lookX,p.lookY))
-                    else:
-                        screen.blit(dirtyPlateImage, (p.lookX, p.lookY))
-                    if p.item.item != None:
-                        drawFood(screen, p.lookX, p.lookY, p.item.item, False)
-                        if type(p.item.item) == Dish:
-                            drawFood(screen, p.lookX-p.width//4, 
-                            p.lookY-p.height, p.item.item.food1, True)
-                            drawFood(screen, p.lookX+4*p.width//6, 
-                            p.lookY-p.height, p.item.item.food2, True)
-                            drawFood(screen, p.lookX-p.width//4, 
-                            p.lookY, p.item.item.food3, True)
-                        elif p.item.item.chop > 0 and p.item.item.chopped == False:
-                            r = pygame.Rect(p.lookX-5, p.lookY-10, 
-                                        p.item.item.chop, 10)
-                            pygame.draw.rect(screen, (0,255,0), r)
-                            
-                elif str(p.item) == 'Pot':
-                    screen.blit(potImage,(p.lookX, p.lookY))
-                    drawFood(screen, p.lookX-p.height//4, 
-                    p.lookY-p.width, p.item.food1, True)
-                    drawFood(screen, p.lookX+4*p.height//6, 
-                    p.lookY-p.width, p.item.food2, True)
-                    drawFood(screen, p.lookX-p.height//4, 
-                    p.lookY, p.item.food3, True)
-                    
-                    if p.item.dish != None:
-                        drawFood(screen, p.lookX, p.lookY, p.item.dish, False)
-    
-                elif str(p.item) == 'Extinguisher':
-                        screen.blit(extinguisherImage,(p.lookX,p.lookY))
-                else:
-                    drawFood(screen, p.lookX, p.lookY, p.item, False)
-                    if p.item.chop > 0 and p.item.chopped == False:
-                        r = pygame.Rect(p.lookX-5, p.lookY-10, 
-                                    p.item.chop, 10)
-                        pygame.draw.rect(screen, (0,255,0), r)
-                
-    
         for counter in counters:
             if type(counter) == PlateReturn or type(counter) == Wash:
                 if counter.plateCount != 0:
@@ -861,11 +871,75 @@ def playGame(playerCount, character):
                                         counter.item.chop, 10)
                             pygame.draw.rect(screen, (0,255,0), r)
             if type(counter) == Stove:
-                counter.cook(screen)
+                counter.cook()
+                if str(counter.item) == 'Pot' and \
+                counter.item.food1 != None and \
+                str(counter.item.food1) != 'fire':
+                    if counter.item.fire > 0 and counter.item.fire < 40:
+                        progress = 50*(1 - (counter.item.fire/40))
+                        r = pygame.Rect(counter.left-5, counter.top-10, 
+                        progress, 10)
+                        pygame.draw.rect(screen, (255,0,0), r)
+                    elif counter.item.fire <= 40:
+                        progress = 50*(1 - (counter.item.cook/counter.item.\
+                        cookTime))
+                        r = pygame.Rect(counter.left-5, counter.top-10, 
+                        progress, 10)
+                        pygame.draw.rect(screen, (0,255,0), r)
+                
+        screen.blit(p1a.character,(p1a.x-25,p1a.y-25))
+        screen.blit(p1b.character,(p1b.x-25,p1b.y-25))
+
+        
+        
+            
+        for p in players:
+            if p.item != None:
+                if str(p.item) == 'Plate':
+                    if p.item.dirty == False:
+                        screen.blit(plateImage,(p.lookX,p.lookY))
+                    else:
+                        screen.blit(dirtyPlateImage, (p.lookX, p.lookY))
+                    if p.item.item != None:
+                        drawFood(screen, p.lookX, p.lookY, p.item.item, False)
+                        if type(p.item.item) == Dish:
+                            drawFood(screen, p.lookX-p.width//4, 
+                            p.lookY-p.height, p.item.item.food1, True)
+                            drawFood(screen, p.lookX+4*p.width//6, 
+                            p.lookY-p.height, p.item.item.food2, True)
+                            drawFood(screen, p.lookX-p.width//4, 
+                            p.lookY, p.item.item.food3, True)
+                        elif p.item.item.chop > 0 and p.item.item.chopped == False:
+                            r = pygame.Rect(p.lookX-5, p.lookY-10, 
+                                        p.item.item.chop, 10)
+                            pygame.draw.rect(screen, (0,255,0), r)
+                            
+                elif str(p.item) == 'Pot':
+                    screen.blit(potImage,(p.lookX, p.lookY))
+                    drawFood(screen, p.lookX-p.height//4, 
+                    p.lookY-p.width, p.item.food1, True)
+                    drawFood(screen, p.lookX+4*p.height//6, 
+                    p.lookY-p.width, p.item.food2, True)
+                    drawFood(screen, p.lookX-p.height//4, 
+                    p.lookY, p.item.food3, True)
+                    
+                    if p.item.dish != None:
+                        drawFood(screen, p.lookX, p.lookY, p.item.dish, False)
+    
+                elif str(p.item) == 'Extinguisher':
+                        screen.blit(extinguisherImage,(p.lookX,p.lookY))
+                else:
+                    drawFood(screen, p.lookX, p.lookY, p.item, False)
+                    if p.item.chop > 0 and p.item.chopped == False:
+                        r = pygame.Rect(p.lookX-5, p.lookY-10, 
+                                    p.item.chop, 10)
+                        pygame.draw.rect(screen, (0,255,0), r)
+                
+    
                     
                             
         textsurface = myfont.render(str(counters[20].score), False, (0, 0, 0))
-        screen.blit(textsurface,(40,500))
+        screen.blit(textsurface,(52,500))
         
         if milliseconds > 1000:
             seconds += 1
@@ -879,8 +953,8 @@ def playGame(playerCount, character):
                         counters[20].recipes[i] = generateRecipes()
                         break
         
-        textsurface1 = myfont.render(str(timer-seconds), False, (0, 0, 0))
-        screen.blit(textsurface1,(900,490))
+        textsurface1 = myfont.render(str(timer-seconds), False, (0, 102, 0))
+        screen.blit(textsurface1,(900,488))
 
         milliseconds += clock.tick(clock_tick_rate)
         

@@ -13,9 +13,6 @@ def drawPlayer(player, screen, counters):
                             .convert_alpha()
     potImage = pygame.image.load("Images/Pot.png").convert_alpha()
     fireImage = pygame.image.load("Images/Fire.png").convert_alpha()
-    if player.c != -1:
-        counter = counters[player.c]
-        pygame.draw.rect(screen, (255,230, 0), counter.r)
     if player.item != None:
         if str(player.item) == 'Plate':
             if player.item.dirty == False:
@@ -32,7 +29,8 @@ def drawPlayer(player, screen, counters):
                     player.lookY-player.height, player.item.item.food2, True)
                     drawFood(screen, player.lookX-player.width//4, 
                     player.lookY, player.item.item.food3, True)
-                elif player.item.item.chop > 0 and player.item.item.chopped == False:
+                elif player.item.item.chop > 0 and player.item.item.chopped ==\
+                 False:
                     r = pygame.Rect(player.lookX-5, player.lookY-10, 
                                 player.item.item.chop, 10)
                     pygame.draw.rect(screen, (0,255,0), r)
@@ -80,27 +78,40 @@ def cook(p):
                     p.item.dish.food1 = Classes.Food(food[0])
                     p.item.dish.food2 = Classes.Food(food[1])
                     p.item.dish.food3 = Classes.Food(food[2])
+                elif food.count('potato') == 2 and \
+                        food.count('carrot') == 1:
+                    p.item.dish = Classes.Dish('potatocarrot')
+                    p.item.dish.food1 = Classes.Food(food[0])
+                    p.item.dish.food2 = Classes.Food(food[1])
+                    p.item.dish.food3 = Classes.Food(food[2])
+        else:
+            p.item.cook =0
+            p.item.cookTime = 0
     return p
                     
-def move(p, key, counters):
+def move(p, key, counters, other):
     fall = None
+    if p.dash == True:
+        modifier = 4
+    else:
+        modifier = 1
     if key == 'left':
-        p.x -= p.speed
+        p.x -= p.speed*modifier
         p.lookX = p.x-p.width//2
         p.lookY = p.y+p.height//4
         p.direction = 'left'
     if key == 'right':
-        p.x += p.speed
+        p.x += p.speed*modifier
         p.lookX = p.x+p.width
         p.lookY = p.y+p.height//4
         p.direction = 'right'
     if key == 'up':
-        p.y -= p.speed
+        p.y -= p.speed*modifier
         p.lookX = p.x+p.width//4
         p.lookY = p.y-p.height//2
         p.direction = 'up'
     if key == 'down':
-        p.y += p.speed
+        p.y += p.speed*modifier
         p.lookX = p.x+p.width//4
         p.lookY = p.y+p.height
         p.direction = 'down'
@@ -108,21 +119,46 @@ def move(p, key, counters):
     for counter in counters:
         if detectCollision(p, p.x, p.y, p.width, p.height, counter):
             if key == 'left':
-                p.x += p.speed
+                p.x += p.speed*modifier
                 
             if key == 'right':
-                p.x -= p.speed
+                p.x -= p.speed*modifier
 
             if key == 'up':
-                p.y += p.speed
+                p.y += p.speed*modifier
                 
             if key == 'down':
-                p.y -= p.speed
-            
-    if p.x < 235 or (p.y > 300 and p.x > 790) or \
-        (p.y<300  and p.x > 740):
-        p.x = 400
-        p.y = 250
+                p.y -= p.speed*modifier
+    if other != None:
+        if detectCollision(p, p.x, p.y, p.width, p.height, other):
+            if key == 'left':
+                p.x += p.speed*modifier
+                
+            if key == 'right':
+                p.x -= p.speed*modifier
+
+            if key == 'up':
+                p.y += p.speed*modifier
+                
+            if key == 'down':
+                p.y -= p.speed*modifier
+        
+    if p.x < 240 or (p.y > 500 and p.x > 790) or (p.y <500 and p.x > 750) or \
+    (p.y<300  and p.x > 725):
+        if p.serverPlayer == 1:
+            p.x = 400
+            p.y = 250
+            if other != None:
+                if detectCollision(p, p.x, p.y, p.width, p.height, other):
+                    p.x = 650
+                    p.y = 250
+        elif p.serverPlayer == 2:
+            p.x = 650
+            p.y = 250
+            if other != None:
+                if detectCollision(p, p.x, p.y, p.width, p.height, other):
+                    p.x = 400
+                    p.y = 250
         fall = 'true'
         if str(p.item) == 'Plate':
             counters[19].plateCount += 1
@@ -148,6 +184,7 @@ def move(p, key, counters):
     p.look = pygame.Rect(p.lookX, p.lookY, p.width//2,
                             p.height//2)
     p.p = pygame.Rect(p.x, p.y, p.width, p.height)
+
     
     return p, fall
 
@@ -253,7 +290,8 @@ def putDown(p, c, counters):
                 p.item.food2 = None
                 p.item.food3 = None
             elif counters[c].item == None:
-                if type(counters[c]) == Classes.Counter or type(counters[c]) == Classes.Stove:
+                if type(counters[c]) == Classes.Counter or type(counters[c]) == \
+                Classes.Stove:
                     counters[c].item = p.item
                     p.item = None
         elif str(p.item) == 'Plate':  #Carrying plate
@@ -265,9 +303,16 @@ def putDown(p, c, counters):
                             for i in range(len(counters[20].recipes)):
                                 if str(p.item.item) == \
                                     str(counters[20].recipes[i]):
+                                    if counters[20].recipeTimes[i] > 45:
+                                        counters[20].score += 1
+                                    elif counters[20].recipeTimes[i] > 30:
+                                        counters[20].score += 2
+                                    elif counters[20].recipeTimes[i] > 15:
+                                        counters[20].score += 3
+                                    else:
+                                        counters[20].score += 4
                                     counters[20].recipes[i] = None
                                     counters[20].recipeTimes[i] = 0
-                                    counters[20].score += 1
                                     #Add new recipe
                                     if counters[20].recipes.count(None) == 4:
                                         counters[20].recipes[0] = generateRecipes()
@@ -482,13 +527,15 @@ def getImage(s, chopped, raw):
             image = pygame.image.load("Images/RecipeOnionSoup.png").convert_alpha()
         elif s == 'stew':
             image = pygame.image.load("Images/RecipeStew.png").convert_alpha()
+        elif s == 'potatocarrot':
+            image = pygame.image.load("Images/RecipepotatoCarrot.png").convert_alpha()
         elif s == 'None':
             image = pygame.image.load("Images/Empty.png").convert_alpha()
         elif s == 'fire':
             image = pygame.image.load("Images/CookingFire.png").convert_alpha()
 
     else:
-        if s == 'onionsoup' or s == 'stew':
+        if s == 'onionsoup' or s == 'stew' or s == 'potatocarrot':
             image = pygame.image.load("Images/OnionSoup.png").convert_alpha()
         elif s == 'onion':
             if chopped == False:
@@ -525,8 +572,9 @@ def drawFood(screen, x,y, item, stove):
     
 
 def generateRecipes():
-    lst = [Classes.Dish('onionsoup'), Classes.Dish('stew')]
-    return(lst[random.randint(0,1)])  
+    lst = [Classes.Dish('onionsoup'), Classes.Dish('stew'), 
+    Classes.Dish('potatocarrot')]
+    return(lst[random.randint(0,2)])  
         
 
         

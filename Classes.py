@@ -152,6 +152,10 @@ class Player(object):
         self.serverPlayer = -1
         self.counters = Functions.makeCounters()
         self.character = None
+        self.start = 'Not Ready'
+        self.disconnect = False
+        self.dash = False
+        self.s = ''
         
         
         

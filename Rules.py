@@ -2,10 +2,14 @@ import pygame
 
 pygame.init()
 
-def rules():
+def rules(players):
     screen = pygame.display.set_mode((1000,600))
-    background = pygame.image.load("Images/RulesBackground.png")\
-                 .convert_alpha()
+    if players == 1:
+        background = pygame.image.load("Images/RulesBackground.png")\
+                    .convert_alpha()
+    else:
+        background = pygame.image.load("Images/Rules2Background.png")\
+                    .convert_alpha()
 
 
     play = False
